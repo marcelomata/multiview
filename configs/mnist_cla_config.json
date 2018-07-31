@@ -1,0 +1,16 @@
+{
+  "exp_name": "mnist_cla_exp",
+
+  "image_height": 28,
+  "image_width": 28,
+  "num_classes": 10,
+
+  "batch_size": 64,
+  "num_epochs": 40,
+  "learning_rate": 0.001,
+
+  "max_to_keep": 2,
+
+  "data_loader": "MNISTDataLoaderNumpy",
+  "data_numpy_pkl": "/Users/sungsahn/Codes/tensorflow-template/data/mnist/data_numpy.pkl"
+}

@@ -1,0 +1,21 @@
+{
+  "exp_name": "mnist_multiview_exp8",
+
+  "image_height": 28,
+  "image_width": 28,
+  "num_classes": 10,
+  "num_hidden_neurons": 64,
+
+  "alpha":0.5,
+  "beta":1.0,
+  "num_test_sample":100,
+
+  "batch_size": 128,
+  "num_epochs": 40,
+  "learning_rate": 2e-4,
+
+  "max_to_keep": 2,
+
+  "data_loader": "MNISTDataLoaderNumpy",
+  "data_numpy_pkl": "/Users/sungsahn/Codes/tensorflow-template/data/mnist/data_numpy.pkl"
+}
