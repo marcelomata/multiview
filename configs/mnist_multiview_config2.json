@@ -11,7 +11,7 @@
   "num_test_sample":100,
 
   "batch_size": 128,
-  "num_epochs": 40,
+  "num_epochs": 100,
   "learning_rate": 2e-4,
 
   "max_to_keep": 2,
