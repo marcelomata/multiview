@@ -1,5 +1,5 @@
 import sys
-import os 
+import os
 
 sys.path.extend([os.path.join(sys.path[0],'..')])
 
@@ -23,12 +23,12 @@ def main():
         args = get_args()
         config = process_config(args.config)
         print(config)
-        
+
     except:
         print("missing or invalid arguments")
         exit(0)
 
-    
+
 
     # create the experiments dirs
     create_dirs([config.summary_dir, config.checkpoint_dir, config.etc_dir])
@@ -46,7 +46,7 @@ def main():
     model = MnistMultiviewModel(data_loader, config)
 
     # create tensorboard logger
-    logger = DefinedSummarizer(sess, summary_dir=config.summary_dir, 
+    logger = DefinedSummarizer(sess, summary_dir=config.summary_dir,
                                scalar_tags=['train/loss_per_epoch', 'train/acc_per_epoch',
                                             'test/loss_per_epoch','test/acc_per_epoch', 'test/ensemble_cross_entropy_per_epoch', 'test/ensemble_acc_per_epoch'])
 
