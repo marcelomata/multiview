@@ -6,11 +6,11 @@
   "num_classes": 10,
 
   "batch_size": 64,
-  "num_epochs": 40,
-  "learning_rate": 0.001,
+  "num_epochs": 100,
+  "learning_rate": 2e-4,
 
   "max_to_keep": 2,
 
   "data_loader": "MNISTDataLoaderNumpy",
-  "data_numpy_pkl": "/home/sungsoo/multiview/data/mnist/data_numpy.pkl"
+  "data_numpy_pkl": "./data/mnist/data_numpy.pkl"
 }

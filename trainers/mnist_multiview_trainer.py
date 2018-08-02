@@ -99,8 +99,8 @@ Train-{}  loss:{:.4f} -- acc:{:.4f}
         also get the loss of that minibatch.
         :return: loss of some metrics to be used in summaries
         """
-        _, loss, cross_entropy, acc = self.sess.run([
-            self.train_op, self.loss_node, self.cross_entropy_node, self.acc_node], feed_dict={self.training: True})
+        _, loss, acc = self.sess.run([
+            self.train_op, self.loss_node, self.acc_node], feed_dict={self.training: True})
         return loss, acc
 
 

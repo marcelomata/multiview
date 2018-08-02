@@ -6,8 +6,8 @@
   "num_classes": 10,
   "num_hidden_neurons": 64,
 
-  "alpha":0.1,
-  "beta":0.1,
+  "alpha":0.25,
+  "beta":0.25,
   "num_test_sample":100,
 
   "batch_size": 128,

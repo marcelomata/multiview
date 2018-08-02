@@ -33,8 +33,8 @@ class MnistClaTrainer(BaseTrainer):
         self.summarizer = logger
 
         self.x, self.y, self.training = tf.get_collection('inputs')
-        self.train_op, self.loss_node, self.acc_node = tf.get_collection('train')
-    
+        self.train_op, self.loss_node, self.cross_entropy_node, self.acc_node = tf.get_collection('train')
+
     def train(self):
         """
         This is the main loop of training
@@ -78,7 +78,7 @@ class MnistClaTrainer(BaseTrainer):
         self.summarizer.summarize(self.model.global_step_tensor.eval(self.sess), summaries_dict)
 
         self.model.save(self.sess)
-        
+
         print("""
 Train-{}  loss:{:.4f} -- acc:{:.4f}
         """.format(epoch, loss_per_epoch.val, acc_per_epoch.val))
@@ -94,7 +94,7 @@ Train-{}  loss:{:.4f} -- acc:{:.4f}
         _, loss, acc = self.sess.run([self.train_op, self.loss_node, self.acc_node],
                                      feed_dict={self.training: True})
         return loss, acc
-    
+
     def test(self, epoch, state='test'):
         # initialize dataset
         self.data_loader.initialize(self.sess, state=state)
@@ -104,24 +104,31 @@ Train-{}  loss:{:.4f} -- acc:{:.4f}
                   desc="Test-{}-".format(epoch))
 
         loss_per_epoch = AverageMeter()
+        cross_entropy_per_epoch = AverageMeter()
         acc_per_epoch = AverageMeter()
 
         # Iterate over batches
         for _ in tt:
             # One Train step on the current batch
-            loss, acc = self.sess.run([self.loss_node, self.acc_node],
+            loss, cross_entropy, acc = self.sess.run([self.loss_node, self.cross_entropy_node, self.acc_node],
                                      feed_dict={self.training: False})
             # update metrics returned from train_step func
             loss_per_epoch.update(loss)
             acc_per_epoch.update(acc)
+            cross_entropy_per_epoch.update(cross_entropy)
 
         # summarize
         summaries_dict = {'test/loss_per_epoch': loss_per_epoch.val,
+                          'test/cross_entropy_per_epoch': cross_entropy_per_epoch.val,
                           'test/acc_per_epoch': acc_per_epoch.val}
         self.summarizer.summarize(self.model.global_step_tensor.eval(self.sess), summaries_dict)
-        
+
         print("""
-Test-{}  loss:{:.4f} -- acc:{:.4f}
-        """.format(epoch, loss_per_epoch.val, acc_per_epoch.val))
+Test-{}  loss:{:.4f} -- cross entropy:{:.4f} -- acc:{:.4f}
+        """.format(
+            epoch,
+            loss_per_epoch.val,
+            cross_entropy_per_epoch.val,
+            acc_per_epoch.val))
 
         tt.close()

@@ -12,8 +12,8 @@ class MnistClaModel(BaseModel):
         self.y = None
         self.training = None
         self.out_argmax = None
-        self.loss_node = None
-        self.acc_node = None
+        self.loss = None
+        self.acc = None
         self.optimizer = None
         self.train_op = None
 
@@ -25,7 +25,7 @@ class MnistClaModel(BaseModel):
 
         :return:
         """
-        
+
         """
         Helper Variables
         """
@@ -33,7 +33,7 @@ class MnistClaModel(BaseModel):
         self.global_step_inc = self.global_step_tensor.assign(self.global_step_tensor+1)
         self.global_epoch_tensor = tf.Variable(0, trainable=False, name='global_epoch')
         self.global_epoch_inc = self.global_epoch_tensor.assign(self.global_epoch_tensor+1)
-        
+
         """
         Inputs to the network
         """
@@ -49,23 +49,45 @@ class MnistClaModel(BaseModel):
         """
         print('Building network...')
         with tf.variable_scope('network'):
-            conv1 = MnistClaModel.conv_bn_relu(self.x, 32, (5, 5), self.training, name='conv1_block')
-            
+            with tf.variable_scope('conv1'):
+                conv1 = tf.layers.conv2d(self.x, 64, (5, 5), activation=tf.nn.relu, kernel_initializer=tf.contrib.layers.xavier_initializer(), name='conv1')
+
             with tf.variable_scope('max_pool1'):
                 max_pool1 = tf.layers.max_pooling2d(conv1, pool_size=(2, 2), strides=(2, 2), name='max_pool')
 
-            conv2 = MnistClaModel.conv_bn_relu(max_pool1, 64, (5, 5), self.training, name='conv2_block')
+            with tf.variable_scope('conv2'):
+                conv2 = tf.layers.conv2d(max_pool1, 64, (5, 5), activation=tf.nn.relu, kernel_initializer=tf.contrib.layers.xavier_initializer(), name='conv2')
 
             with tf.variable_scope('max_pool2'):
                 max_pool2 = tf.layers.max_pooling2d(conv2, pool_size=(2, 2), strides=(2, 2), name='max_pool')
 
-            with tf.variable_scope('flatten'):
-                flattened = tf.layers.flatten(max_pool2, name='flatten')
+            with tf.variable_scope('conv3'):
+                conv3 = tf.layers.conv2d(max_pool2, 64, (3, 3), activation=tf.nn.relu, kernel_initializer=tf.contrib.layers.xavier_initializer(), name='conv2')
 
-            dense1 = MnistClaModel.dense_bn_relu_dropout(flattened, 1024, 0.5, self.training, name='dense1_block')
-            
+            with tf.variable_scope('max_pool3'):
+                max_pool3 = tf.layers.max_pooling2d(conv3, pool_size=(2, 2), strides=(2, 2), name='max_pool')
+
+            with tf.variable_scope('flatten'):
+                flattened = tf.layers.flatten(max_pool3, name='flatten')
+
+            with tf.variable_scope('dense1'):
+                dense1 = tf.layers.dense(flattened, 500, activation=tf.nn.relu, kernel_initializer=tf.contrib.layers.xavier_initializer(), name='dense1')
+
+            with tf.variable_scope('dense2'):
+                #dense2 = tf.layers.dense(concat, 500, activation=tf.nn.tanh, kernel_initializer=tf.contrib.layers.xavier_initializer(), name='dense2')
+                dense2 = tf.layers.dense(dense1, 500, activation=tf.nn.relu, kernel_initializer=tf.contrib.layers.xavier_initializer(), name='dense2')
+
+            with tf.variable_scope('dense3'):
+                dense3 = tf.layers.dense(dense2, 2*64, kernel_initializer=tf.contrib.layers.xavier_initializer(), name='dense3')
+
+            with tf.variable_scope('dense4'):
+                dense4 = tf.layers.dense(dense3, 500, kernel_initializer=tf.contrib.layers.xavier_initializer(), name='dense4')
+
+            with tf.variable_scope('dense5'):
+                dense5 = tf.layers.dense(dense4, 500, kernel_initializer=tf.contrib.layers.xavier_initializer(), name='dense5')
+
             with tf.variable_scope('out'):
-                self.out = tf.layers.dense(dense1, self.config.num_classes,
+                self.out = tf.layers.dense(dense5, self.config.num_classes,
                                            kernel_initializer=tf.initializers.truncated_normal, name='out')
                 tf.add_to_collection('out', self.out)
 
@@ -80,18 +102,20 @@ class MnistClaModel(BaseModel):
             self.out_argmax = tf.argmax(self.out, axis=-1, output_type=tf.int64, name='out_argmax')
 
         with tf.variable_scope('loss_acc'):
-            self.loss_node = tf.losses.sparse_softmax_cross_entropy(labels=self.y, logits=self.out)
-            self.acc_node = tf.reduce_mean(tf.cast(tf.equal(self.y, self.out_argmax), tf.float32))
+            self.loss = tf.losses.sparse_softmax_cross_entropy(labels=self.y, logits=self.out)
+            self.cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.y, logits=self.out))
+            self.acc = tf.reduce_mean(tf.cast(tf.equal(self.y, self.out_argmax), tf.float32))
 
         with tf.variable_scope('train_op'):
             self.optimizer = tf.train.AdamOptimizer(self.config.learning_rate)
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
             with tf.control_dependencies(update_ops):
-                self.train_op = self.optimizer.minimize(self.loss_node, global_step=self.global_step_tensor)
+                self.train_op = self.optimizer.minimize(self.loss, global_step=self.global_step_tensor)
 
         tf.add_to_collection('train', self.train_op)
-        tf.add_to_collection('train', self.loss_node)
-        tf.add_to_collection('train', self.acc_node)
+        tf.add_to_collection('train', self.cross_entropy)
+        tf.add_to_collection('train', self.loss)
+        tf.add_to_collection('train', self.acc)
 
     def init_saver(self):
         """
