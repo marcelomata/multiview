@@ -50,7 +50,7 @@ class MnistMultiviewModel(BaseModel):
         padded_x = tf.pad(self.x, tf.constant([[0, 0], [2, 2], [2, 2], [0, 0]]), "CONSTANT")
         print(padded_x)
         #z_mean, z_stddev, self.y_one_hot = MnistMultiviewModel.encoder(self.x, self.config.num_hidden_neurons, name='encoder1')
-        z_mean, z_stddev = MnistMultiviewModel.encoder(padded_x, self.y, self.config.num_hidden_neurons, name='encoder1')
+        z_mean, z_stddev = MnistMultiviewModel.encoder(padded_x, self.config.num_hidden_neurons, name='encoder1')
         self.z = MnistMultiviewModel.sampler(z_mean, z_stddev, self.config.batch_size, self.config.num_hidden_neurons, name='sampler1')
         self.x_decoded = MnistMultiviewModel.decoder(self.z, name='decoder1')
 
@@ -79,7 +79,7 @@ class MnistMultiviewModel(BaseModel):
         with tf.variable_scope('loss'):
             # calculate KL divergence between approximate posterior q and prior p
             with tf.variable_scope('KL'):
-                kl = self.config.beta/self.config.batch_size*MnistMultiviewModel.normal_kl(z_mean, z_stddev)#
+                kl = self.config.beta*MnistMultiviewModel.normal_kl(z_mean, z_stddev)#
 
             # calculate reconstruction error between decoded sample and original input batch
             with tf.variable_scope('x_log_lik'):
@@ -120,7 +120,7 @@ class MnistMultiviewModel(BaseModel):
         self.saver = tf.train.Saver(max_to_keep=self.config.max_to_keep, save_relative_paths=True)
 
     @staticmethod
-    def encoder(x, y, num_hidden_neurons, name='encoder'):
+    def encoder(x, num_hidden_neurons, name='encoder'):
         """
         Encoder Architecture
         """
