@@ -33,7 +33,7 @@ class MnistMultiviewTrainer(BaseTrainer):
         self.summarizer = logger
 
         self.x, self.y, self.training = tf.get_collection('inputs')
-        self.train_op, self.loss_node, self.acc_node = tf.get_collection('train')
+        self.train_op, self.loss_node, self.cross_entropy_node, self.acc_node = tf.get_collection('train')
 
     def train(self):
         """
@@ -92,8 +92,8 @@ Train-{}  loss:{:.4f} -- acc:{:.4f}
         also get the loss of that minibatch.
         :return: loss of some metrics to be used in summaries
         """
-        _, loss, acc = self.sess.run([self.train_op, self.loss_node, self.acc_node],
-                                     feed_dict={self.training: True})
+        _, loss, cross_entropy, acc = self.sess.run([
+            self.train_op, self.loss_node, self.cross_entropy_node, self.acc_node], feed_dict={self.training: True})
         return loss, acc
 
 
@@ -106,6 +106,7 @@ Train-{}  loss:{:.4f} -- acc:{:.4f}
                   desc="Test-{}-".format(epoch))
 
         loss_per_epoch = AverageMeter()
+        cross_entropy_per_epoch = AverageMeter()
         acc_per_epoch = AverageMeter()
 
         ensemble_cross_entropy_per_epoch = AverageMeter()
@@ -113,11 +114,12 @@ Train-{}  loss:{:.4f} -- acc:{:.4f}
         # Iterate over batches
         for _ in tt:
             # One Train step on the current batch
-            loss, acc = self.sess.run([self.loss_node, self.acc_node],
+            loss, cross_entropy, acc = self.sess.run([self.loss_node, self.cross_entropy_node, self.acc_node],
                                      feed_dict={self.training: False})
             # update metrics returned from train_step func
             loss_per_epoch.update(loss)
             acc_per_epoch.update(acc)
+            cross_entropy_per_epoch.update(cross_entropy)
 
             y_sample, sampled_softmax = self.sess.run([self.y, self.model.sampled_softmaxs])
             ensemble_softmax = np.mean(sampled_softmax, axis=1)
@@ -126,22 +128,29 @@ Train-{}  loss:{:.4f} -- acc:{:.4f}
             #  ensemble_softmax += np.array(softmax_sample)/self.config.num_test_sample
 
             onehot_y_sample = np.eye(self.config.num_classes)[y_sample]
-            ensemble_cross_entropy = np.mean(np.sum(onehot_y_sample*ensemble_softmax, axis=1), axis=0)
-            ensemble_acc = np.mean(np.equal(np.argmax(ensemble_softmax, axis=1),y_sample))
+            ensemble_cross_entropy = -np.mean(np.sum(onehot_y_sample*np.log(ensemble_softmax), axis=1), axis=0)
+            ensemble_acc = np.mean(np.equal(np.argmax(ensemble_softmax, axis=1), y_sample))
 
             ensemble_cross_entropy_per_epoch.update(ensemble_cross_entropy)
             ensemble_acc_per_epoch.update(ensemble_acc)
 
         # summarize
         summaries_dict = {'test/loss_per_epoch': loss_per_epoch.val,
+                          'test/cross_entropy_per_epoch': cross_entropy_per_epoch.val,
                           'test/acc_per_epoch': acc_per_epoch.val,
                           'test/ensemble_cross_entropy_per_epoch': ensemble_cross_entropy_per_epoch.val,
                           'test/ensemble_acc_per_epoch': ensemble_acc_per_epoch.val}
         self.summarizer.summarize(self.model.global_step_tensor.eval(self.sess), summaries_dict)
 
         print("""
-Test-{}  loss:{:.4f} -- acc:{:.4f} -- ensemble cross entropy:{:.4f} -- ensemble acc:{:.4f}
-        """.format(epoch, loss_per_epoch.val, acc_per_epoch.val, ensemble_cross_entropy_per_epoch.val, ensemble_acc_per_epoch.val))
+Test-{}  loss:{:.4f} -- cross entropy:{:.4f} -- acc:{:.4f} -- ensemble cross entropy:{:.4f} -- ensemble acc:{:.4f}
+        """.format(
+            epoch,
+            loss_per_epoch.val,
+            cross_entropy_per_epoch.val,
+            acc_per_epoch.val,
+            ensemble_cross_entropy_per_epoch.val,
+            ensemble_acc_per_epoch.val))
 
         tt.close()
 

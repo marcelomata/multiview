@@ -86,7 +86,8 @@ class MnistMultiviewModel(BaseModel):
                 x_log_lik = self.config.alpha*MnistMultiviewModel.bern_log_lik(padded_x, self.x_decoded)/float(self.config.batch_size)
 
             with tf.variable_scope('y_log_lik'):
-                y_log_lik = tf.losses.sparse_softmax_cross_entropy(labels=self.y, logits=self.out)/float(self.config.batch_size)
+                self.cross_entropy = tf.losses.sparse_softmax_cross_entropy(labels=self.y, logits=self.out)
+                y_log_lik = self.cross_entropy/float(self.config.batch_size)
 
             with tf.variable_scope('out_argmax'):
                 self.out_argmax = tf.argmax(self.out, axis=-1, output_type=tf.int64, name='out_argmax')
@@ -108,6 +109,7 @@ class MnistMultiviewModel(BaseModel):
 
         tf.add_to_collection('train', self.train_op)
         tf.add_to_collection('train', self.loss_node)
+        tf.add_to_collection('train', self.cross_entropy)
         tf.add_to_collection('train', self.acc_node)
 
     def init_saver(self):
@@ -145,14 +147,15 @@ class MnistMultiviewModel(BaseModel):
                 flattened = tf.layers.flatten(max_pool3, name='flatten')
 
             with tf.variable_scope('dense1'):
-                dense1 = tf.layers.dense(flattened, 500, activation=tf.nn.tanh, kernel_initializer=tf.contrib.layers.xavier_initializer(), name='dense1')
+                dense1 = tf.layers.dense(flattened, 500, activation=tf.nn.relu, kernel_initializer=tf.contrib.layers.xavier_initializer(), name='dense1')
 
-            with tf.variable_scope('concat'):
-                y_one_hot = tf.one_hot(y, 10)
-                concat = tf.concat([dense1, y_one_hot], axis=1)
+            #with tf.variable_scope('concat'):
+                #y_one_hot = tf.one_hot(y, 10)
+                #concat = tf.concat([dense1, y_one_hot], axis=1)
 
             with tf.variable_scope('dense2'):
-                dense2 = tf.layers.dense(concat, 500, activation=tf.nn.tanh, kernel_initializer=tf.contrib.layers.xavier_initializer(), name='dense2')
+                #dense2 = tf.layers.dense(concat, 500, activation=tf.nn.tanh, kernel_initializer=tf.contrib.layers.xavier_initializer(), name='dense2')
+                dense2 = tf.layers.dense(dense1, 500, activation=tf.nn.relu, kernel_initializer=tf.contrib.layers.xavier_initializer(), name='dense2')
 
 
             with tf.variable_scope('dense3'):

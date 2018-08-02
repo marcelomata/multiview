@@ -37,6 +37,9 @@ def main():
     tf.reset_default_graph()
     tf.set_random_seed(1)
     np.random.seed(1)
+
+    os.environ["CUDA_VISIBLE_DEVICES"]=", ".join(args.gpu_name)
+
     sess = tf.Session()
 
     # create your data generator
@@ -48,7 +51,9 @@ def main():
     # create tensorboard logger
     logger = DefinedSummarizer(sess, summary_dir=config.summary_dir,
                                scalar_tags=['train/loss_per_epoch', 'train/acc_per_epoch',
-                                            'test/loss_per_epoch','test/acc_per_epoch', 'test/ensemble_cross_entropy_per_epoch', 'test/ensemble_acc_per_epoch'])
+                                            'test/loss_per_epoch', 'test/cross_entropy_per_epoch',
+                                            'test/acc_per_epoch', 'test/ensemble_cross_entropy_per_epoch',
+                                            'test/ensemble_acc_per_epoch'])
 
     # create trainer and path all previous components to it
     trainer = MnistMultiviewTrainer(sess, model, config, logger, data_loader)
