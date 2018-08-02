@@ -27,7 +27,7 @@ class MnistMultiviewTrainer(BaseTrainer):
         super(MnistMultiviewTrainer, self).__init__(sess, model, config, logger, data_loader)
 
         # load the model from the latest checkpoint
-        self.model.load(self.sess)
+        self.pretrained = self.model.load(self.sess)
 
         # Summarizer
         self.summarizer = logger
@@ -41,10 +41,15 @@ class MnistMultiviewTrainer(BaseTrainer):
         Looping on the epochs
         :return:
         """
+        print("""
+              Using pretrained model
+              """)
+        if self.pretrained:
+            self.test(self.model.cur_epoch_tensor.eval(self.sess))
+
         #self.test(self.model.cur_epoch_tensor.eval(self.sess))
         for cur_epoch in range(self.model.cur_epoch_tensor.eval(self.sess), self.config.num_epochs + 1, 1):
             self.train_epoch(cur_epoch)
-            self.sess.run(self.model.increment_cur_epoch_tensor)
             self.test(cur_epoch)
 
     def train_epoch(self, epoch=None):
@@ -78,11 +83,13 @@ class MnistMultiviewTrainer(BaseTrainer):
                           'train/acc_per_epoch': acc_per_epoch.val}
         self.summarizer.summarize(self.model.global_step_tensor.eval(self.sess), summaries_dict)
 
-        self.model.save(self.sess)
-
         print("""
 Train-{}  loss:{:.4f} -- acc:{:.4f}
         """.format(epoch, loss_per_epoch.val, acc_per_epoch.val))
+
+        self.sess.run(self.model.increment_cur_epoch_tensor)
+
+        self.model.save(self.sess)
 
         tt.close()
 
@@ -123,6 +130,7 @@ Train-{}  loss:{:.4f} -- acc:{:.4f}
 
             y_sample, sampled_softmax = self.sess.run([self.y, self.model.sampled_softmaxs])
             ensemble_softmax = np.mean(sampled_softmax, axis=1)
+            ensemble_softmax[ensemble_softmax<1e-8]=1e-8
             #for _ in range(self.config.num_test_sample):
             #   y_sample, softmax_sample = self.sess.run([self.y, self.model.out_softmax], feed_dict={self.training: False})
             #  ensemble_softmax += np.array(softmax_sample)/self.config.num_test_sample
